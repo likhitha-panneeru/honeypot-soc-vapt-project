@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cloud VAPT + Cloud SOC — Complete Implementation Guide</title>
+<style>
+  :root{
+    --navy:#0B1220;
+    --navy-soft:#121B2E;
+    --paper:#F7F8FA;
+    --paper-card:#FFFFFF;
+    --ink:#151B26;
+    --ink-soft:#4B5666;
+    --line:#E3E7ED;
+    --signal:#1B8A5A;
+    --signal-soft:#E6F5EE;
+    --amber:#B4650A;
+    --amber-soft:#FCF0DF;
+    --cyan:#0E7CBA;
+    --cyan-soft:#E7F3FA;
+    --code-bg:#0B1220;
+    --code-ink:#B9F6CA;
+    --mono: "IBM Plex Mono", "SF Mono", Consolas, "Courier New", monospace;
+    --sans: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--sans);
+    line-height:1.6;
+    font-size:16px;
+  }
+  a{color:var(--cyan);}
+
+  /* ===== Layout ===== */
+  .shell{display:flex; min-height:100vh;}
+  .sidebar{
+    width:280px; flex-shrink:0;
+    background:var(--navy);
+    color:#CBD5E1;
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    padding:28px 20px 40px;
+    font-family:var(--mono);
+  }
+  .sidebar .brand{
+    font-size:13px; letter-spacing:.14em; text-transform:uppercase;
+    color:#7DD3AE; margin-bottom:4px;
+  }
+  .sidebar h1{
+    font-size:18px; color:#fff; margin:0 0 24px; line-height:1.35; font-weight:600;
+  }
+  .sidebar nav a{
+    display:block; color:#93A2B8; text-decoration:none; font-size:13px;
+    padding:7px 0 7px 14px; border-left:2px solid #223047; margin-bottom:1px;
+    transition:.15s;
+  }
+  .sidebar nav a:hover, .sidebar nav a.active{
+    color:#fff; border-left-color:#22C55E;
+  }
+  .sidebar nav .grp{
+    margin-top:18px; margin-bottom:6px; color:#5B6B85; font-size:11px;
+    letter-spacing:.1em; text-transform:uppercase;
+  }
+
+  main{flex:1; min-width:0;}
+  .container{max-width:840px; margin:0 auto; padding:56px 40px 120px;}
+
+  /* ===== Hero ===== */
+  .hero{
+    background:var(--navy);
+    color:#fff;
+    padding:56px 40px;
+    margin-bottom:0;
+  }
+  .hero .eyebrow{
+    font-family:var(--mono); font-size:12px; letter-spacing:.16em; text-transform:uppercase;
+    color:#7DD3AE; margin-bottom:14px;
+  }
+  .hero h1{
+    font-size:34px; margin:0 0 14px; font-weight:650; letter-spacing:-.01em; max-width:680px;
+  }
+  .hero p{
+    color:#AAB6C7; max-width:620px; font-size:16px; margin:0;
+  }
+  .pipeline{
+    display:flex; gap:0; margin-top:36px; flex-wrap:wrap;
+  }
+  .pipeline .step{
+    font-family:var(--mono); font-size:12.5px; color:#0B1220;
+    background:#22C55E; padding:9px 14px; border-radius:3px;
+    display:flex; align-items:center; gap:8px; font-weight:600;
+  }
+  .pipeline .arrow{ color:#3A4A63; display:flex; align-items:center; padding:0 8px; font-size:16px;}
+
+  /* ===== Content ===== */
+  h2.phase{
+    font-family:var(--mono);
+    font-size:13px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--signal);
+    margin:0 0 6px;
+    display:flex; align-items:center; gap:10px;
+  }
+  h2.phase .num{
+    background:var(--signal-soft); color:var(--signal);
+    border-radius:3px; padding:2px 8px; font-size:12px;
+  }
+  h3.title{
+    font-size:24px; margin:2px 0 18px; font-weight:650; letter-spacing:-.01em;
+  }
+  section.phase-block{
+    padding:44px 0; border-top:1px solid var(--line);
+  }
+  section.phase-block:first-of-type{border-top:none;}
+
+  p{color:var(--ink); margin:0 0 16px;}
+  .lead{color:var(--ink-soft); font-size:16.5px;}
+
+  .callout{
+    border-radius:6px; padding:16px 18px; margin:18px 0; font-size:14.5px;
+  }
+  .callout.why{ background:var(--cyan-soft); border-left:3px solid var(--cyan); }
+  .callout.why .label{ font-family:var(--mono); font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--cyan); margin-bottom:6px; font-weight:700;}
+  .callout.warn{ background:var(--amber-soft); border-left:3px solid var(--amber); }
+  .callout.warn .label{ font-family:var(--mono); font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--amber); margin-bottom:6px; font-weight:700;}
+
+  .step-card{
+    background:var(--paper-card); border:1px solid var(--line); border-radius:8px;
+    padding:22px 24px; margin:18px 0;
+  }
+  .step-card h4{
+    margin:0 0 10px; font-size:15.5px; font-weight:650;
+    display:flex; align-items:center; gap:10px;
+  }
+  .step-card h4 .dot{
+    width:22px; height:22px; border-radius:50%; background:var(--navy); color:#fff;
+    font-family:var(--mono); font-size:11.5px; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+
+  pre{
+    background:var(--code-bg); color:var(--code-ink);
+    padding:16px 18px; border-radius:6px; overflow-x:auto;
+    font-family:var(--mono); font-size:13px; line-height:1.55;
+    margin:12px 0 18px;
+  }
+  code.inline{
+    font-family:var(--mono); background:#EEF1F5; color:#B4650A;
+    padding:1px 6px; border-radius:4px; font-size:13.5px;
+  }
+
+  table{ width:100%; border-collapse:collapse; margin:16px 0 20px; font-size:14.5px;}
+  th,td{ text-align:left; padding:9px 12px; border-bottom:1px solid var(--line);}
+  th{ font-family:var(--mono); font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;}
+
+  ul.plain{ padding-left:20px; margin:0 0 16px;}
+  ul.plain li{ margin-bottom:8px; }
+
+  .badge{
+    display:inline-block; font-family:var(--mono); font-size:11px; padding:2px 8px;
+    border-radius:3px; background:var(--signal-soft); color:var(--signal); margin-left:8px; font-weight:600;
+  }
+  .badge.paid{ background:var(--amber-soft); color:var(--amber); }
+
+  .flow-mini{
+    display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:6px 0 22px;
+    font-family:var(--mono); font-size:12px;
+  }
+  .flow-mini span.node{
+    background:#EEF1F5; padding:5px 10px; border-radius:4px; color:var(--ink-soft);
+  }
+  .flow-mini span.arrow{ color:#B7C0CC; }
+
+  .footer-note{
+    margin-top:60px; padding-top:24px; border-top:1px solid var(--line);
+    color:var(--ink-soft); font-size:13.5px;
+  }
+
+  @media (max-width: 880px){
+    .sidebar{ display:none; }
+    .container{ padding:36px 20px 80px; }
+    .hero{ padding:40px 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <aside class="sidebar">
+    <div class="brand">Implementation Guide</div>
+    <h1>Cloud VAPT + Cloud SOC on AWS</h1>
+    <nav>
+      <a href="#overview">Overview &amp; Flow</a>
+      <div class="grp">Build</div>
+      <a href="#phase1">1. AWS Account &amp; Network</a>
+      <a href="#phase2">2. Launch the Target EC2</a>
+      <a href="#phase3">3. Deploy Juice Shop</a>
+      <a href="#phase4">4. Turn On Visibility</a>
+      <div class="grp">Attack</div>
+      <a href="#phase5">5. Attack Like a Pentester</a>
+      <div class="grp">Detect</div>
+      <a href="#phase6">6. Ship Logs to a SIEM</a>
+      <a href="#phase7">7. Build Dashboards &amp; Rules</a>
+      <div class="grp">Respond</div>
+      <a href="#phase8">8. Analyst Investigation</a>
+      <div class="grp">Extend</div>
+      <a href="#phase9">9. Going Further</a>
+      <a href="#costs">Cost &amp; Safety Notes</a>
+      <a href="#wrapup">Wrap-Up &amp; Interview Tips</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="hero" id="overview">
+      <div class="eyebrow">Cloud Security · Purple Team Project</div>
+      <h1>Cloud VAPT + Cloud SOC on AWS</h1>
+      <p>Attack it. Log it. Detect it. Investigate it. This guide walks through standing up a deliberately vulnerable AWS app, turning on real cloud telemetry, attacking it like a pentester, and then investigating those attacks exactly the way a cloud SOC analyst would — end to end.</p>
+      <div class="pipeline">
+        <div class="step">1 · Attack</div><div class="arrow">→</div>
+        <div class="step">2 · Cloud Logs</div><div class="arrow">→</div>
+        <div class="step">3 · SIEM</div><div class="arrow">→</div>
+        <div class="step">4 · Detection</div><div class="arrow">→</div>
+        <div class="step">5 · SOC Response</div>
+      </div>
+    </div>
+
+    <div class="container">
+
+      <section class="phase-block">
+        <h2 class="phase"><span class="num">Why</span> This Project</h2>
+        <h3 class="title">Most VAPT projects stop at the exploit. This one keeps going.</h3>
+        <p class="lead">Every attack against a deliberately vulnerable AWS application is captured in real cloud telemetry, shipped to a SIEM, and investigated exactly the way a real cloud SOC analyst would. That's the whole idea in one sentence — you're not just breaking something, you're proving you can see the break happen, detect it, and respond to it.</p>
+
+        <table>
+          <tr><th>Layer</th><th>What it does</th><th>Tool used here</th></tr>
+          <tr><td>Target</td><td>An app worth attacking</td><td>OWASP Juice Shop on EC2</td></tr>
+          <tr><td>Attacker</td><td>Runs the actual attacks</td><td>Kali Linux</td></tr>
+          <tr><td>Network</td><td>Isolates and exposes only what's needed</td><td>VPC, Security Groups</td></tr>
+          <tr><td>Telemetry</td><td>Records what happened</td><td>CloudTrail, VPC Flow Logs</td></tr>
+          <tr><td>Detection</td><td>Flags what looks malicious</td><td>GuardDuty, Security Hub</td></tr>
+          <tr><td>Investigation</td><td>Where you read and correlate everything</td><td>OpenSearch / Kibana</td></tr>
+        </table>
+
+        <div class="callout why">
+          <div class="label">Why this matters in an interview</div>
+          Naming CloudTrail, VPC Flow Logs, GuardDuty, and Security Hub correctly — and explaining what each one actually catches — signals real cloud security fluency. It's the difference between "I know cybersecurity concepts" and "I've operated the tools a cloud SOC analyst uses daily."
+        </div>
+      </section>
+
+      <!-- PHASE 1 -->
+      <section class="phase-block" id="phase1">
+        <h2 class="phase"><span class="num">Phase 1</span></h2>
+        <h3 class="title">Set up the AWS account and network</h3>
+        <p>Before anything gets deployed, you need a place for it to live — an isolated network inside AWS, called a VPC (Virtual Private Cloud). Think of a VPC as your own private section of AWS's data center, walled off from every other customer's traffic.</p>
+
+        <div class="step-card">
+          <h4><span class="dot">1</span> Create/confirm your AWS account</h4>
+          <p>Sign up at <code class="inline">aws.amazon.com/free</code> if you don't already have an account. A card is required for identity verification — a small refundable authorization is placed, no real charge if you stay in free tier.</p>
+        </div>
+
+        <div class="step-card">
+          <h4><span class="dot">2</span> Set your region</h4>
+          <p>Pick a region close to you for lower latency — e.g. <code class="inline">ap-south-1</code> (Mumbai). Every resource you create (EC2, VPC, GuardDuty) is tied to whichever region is selected in the top-right corner of the console.</p>
+        </div>
+
+        <div class="step-card">
+          <h4><span class="dot">3</span> Create a VPC</h4>
+          <p>Console → search <strong>VPC</strong> → <strong>Create VPC</strong> → choose "VPC and more" (this auto-creates subnets, route tables, and an internet gateway for you). Give it a name like <code class="inline">cloud-soc-vpc</code>.</p>
+          <p>Inside that VPC, create:</p>
+          <ul class="plain">
+            <li><strong>One public subnet</strong> — where the Juice Shop web server will live, since it needs to be reachable from the internet for you to attack it.</li>
+            <li><strong>One private subnet (optional)</strong> — for any logging component you don't want directly internet-facing. Not mandatory for a student build; skip if you want to move faster.</li>
+          </ul>
+        </div>
+
+        <div class="callout why">
+          <div class="label">Why a VPC at all?</div>
+          Every real AWS deployment lives inside a VPC — it's the fundamental unit of network isolation. Building one yourself (rather than using the account's pre-existing "default VPC") shows you understand network segmentation, which is core cloud security knowledge.
+        </div>
+      </section>
+
+      <!-- PHASE 2 -->
+      <section class="phase-block" id="phase2">
+        <h2 class="phase"><span class="num">Phase 2</span></h2>
+        <h3 class="title">Launch the target EC2 instance</h3>
+        <p>This is the server that will host Juice Shop — the deliberately vulnerable app you'll attack.</p>
+
+        <div class="step-card">
+          <h4><span class="dot">1</span> Launch an EC2 instance</h4>
+          <p>EC2 → Launch Instance:</p>
+          <ul class="plain">
+            <li>Name: <code class="inline">juiceshop-target</code></li>
+            <li>AMI: Ubuntu Server 22.04/24.04 (Free tier eligible)</li>
+            <li>Instance type: <code class="inline">t2.micro</code> (Free tier eligible — enough for one Docker container)</li>
+            <li>Key pair: create new, download the <code class="inline">.pem</code> file, keep it safe</li>
+            <li>Network: place it in the <strong>public subnet</strong> of the VPC you just created</li>
+            <li>Storage: default 8GB is fine</li>
+          </ul>
+        </div>
+
+        <div class="step-card">
+          <h4><span class="dot">2</span> Configure the Security Group (firewall)</h4>
+          <p>Allow only what you actually need — this is different from a honeypot, where you want everything open. Here you want a realistic, minimal exposure:</p>
+          <ul class="plain">
+            <li><strong>Port 22 (SSH)</strong> — from your own IP only, not "Anywhere," since this is your management access, not a trap</li>
+            <li><strong>Port 3000 (Juice Shop's web port)</strong> — from Anywhere (0.0.0.0/0), since this needs to be reachable to attack it like a real web app</li>
+          </ul>
+        </div>
+
+        <div class="callout why">
+          <div class="label">Why lock down SSH but open port 3000?</div>
+          A real production server only exposes the service it's meant to serve (the web app) — not its management interface. Restricting SSH to your own IP while leaving the web port open mirrors how a real, if imperfectly configured, web server would be set up. It's a small detail that shows security-minded thinking.
+        </div>
+      </section>
+
+      <!-- PHASE 3 -->
+      <section class="phase-block" id="phase3">
+        <h2 class="phase"><span class="num">Phase 3</span></h2>
+        <h3 class="title">Deploy OWASP Juice Shop</h3>
+        <p>Juice Shop is a deliberately, legally vulnerable web application built specifically for security practice. It's maintained by OWASP and contains dozens of intentional bugs — SQL injection, XSS, broken authentication, and more.</p>
+
+        <div class="step-card">
+          <h4><span class="dot">1</span> Connect to your EC2 instance</h4>
+          <pre>ssh -i your-key.pem ubuntu@YOUR_EC2_PUBLIC_IP</pre>
+        </div>
+
+        <div class="step-card">
+          <h4><span class="dot">2</span> Install Docker</h4>
+          <pre>sudo apt update && sudo apt upgrade -y
+sudo apt install docker.io -y
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo usermod -aG docker $USER</pre>
+          <p>Log out and reconnect for the group change to apply.</p>
+        </div>
+
+        <div class="step-card">
+          <h4><span class="dot">3</span> Run Juice Shop</h4>
+          <pre>docker run -d -p 3000:3000 bkimminich/juice-shop</pre>
+          <p>Downloads and starts Juice Shop, exposed on port 3000.</p>
+        </div>
+
+        <div class="step-card">
+          <h4><span class="dot">4</span> Confirm it's live</h4>
+          <p>Open <code class="inline">http://YOUR_EC2_PUBLIC_IP:3000</code> in a browser — you should see the Juice Shop storefront. This is now a legal, disposable practice target sitting on the real internet.</p>
+        </div>
+      </section>
+
+      <!-- PHASE 4 -->
+      <section class="phase-block" id="phase4">
+        <h2 class="phase"><span class="num">Phase 4</span></h2>
+        <h3 class="title">Turn on visibility — enable AWS's native security services</h3>
+        <p>Right now, if someone attacks Juice Shop, nothing records it in a security-relevant way. This phase turns a plain EC2 box into a fully instrumented environment — every login, every packet, every scan leaves a trace.</p>
+
+        <div class="flow-mini">
+          <span class="node">CloudTrail</span><span class="arrow">＋</span>
+          <span class="node">VPC Flow Logs</span><span class="arrow">＋</span>
+          <span class="node">GuardDuty</span><span class="arrow">＋</span>
+          <span class="node">Security Hub</span>
+        </div>
+
+        <div class="step-card">
+          <h4><span class="dot">1</span> Enable CloudTrail</h4>
+          <p>Console → search <strong>CloudTrail</strong> → Create trail → apply to <strong>all regions</strong> → choose an S3 bucket to store logs (create a new one if needed).</p>
+          <p><strong>What it captures:</strong> console logins, IAM changes, Security Group edits, EC2 start/stop — essentially every API call made against your AWS account.</p>
+        </div>
+
+        <div class="step-card">
+          <h4><span class="dot">2</span> Enable VPC Flow Logs</h4>
+          <p>VPC console → select your VPC → <strong>Flow Logs</strong> tab → Create flow log → destination: CloudWatch Logs (simplest) or S3.</p>
+          <p><strong>What it captures:</strong> source/destination IP, port, protocol, and whether traffic was allowed or denied — for every single connection to/from your VPC.</p>
+        </div>
+
+        <div class="step-card">
+          <h4><span class="dot">3</span> Enable GuardDuty</h4>
+          <pre># Console: search "GuardDuty" → Enable GuardDuty
+# No config needed — it starts analyzing automatically</pre>
+          <p><strong>What it captures:</strong> port scanning, brute-force attempts, unusual API calls, credential abuse — GuardDuty applies AWS's own threat-intelligence models against your CloudTrail and Flow Log data automatically.</p>
+        </div>
+
+        <div class="step-card">
+          <h4><span class="dot">4</span> Enable Security Hub</h4>
+          <p>Console → search <strong>Security Hub</strong> → Enable. It automatically pulls in GuardDuty findings (and other AWS security checks) into one central dashboard.</p>
+        </div>
+
+        <div class="callout why">
+          <div class="label">Why all four, not just one?</div>
+          Each covers a different layer: CloudTrail = "what changed in my account," VPC Flow Logs = "what network traffic happened," GuardDuty = "what looks malicious," Security Hub = "everything in one place." Together they turn a silent EC2 box into a fully observable system — this is genuinely how AWS-native security monitoring is built in real companies.
+        </div>
+
+        <div class="callout warn">
+          <div class="label">Cost note</div>
+          GuardDuty includes a 30-day free trial per account per region. For a small student lab (low traffic, short duration), expect costs of well under $1-2 if you disable it right after your testing window. See the Cost &amp; Safety section near the end of this guide.
+        </div>
+      </section>
+
+      <!-- PHASE 5 -->
+      <section class="phase-block" id="phase5">
+        <h2 class="phase"><span class="num">Phase 5</span></h2>
+        <h3 class="title">Attack the target like a pentester</h3>
+        <p>With telemetry now live, every action below will leave a trace somewhere in CloudTrail, VPC Flow Logs, or a GuardDuty finding — that's the entire point.</p>
+
+        <div class="step-card">
+          <h4><span class="dot">1</span> SQL Injection</h4>
+          <p>Try classic login-bypass payloads against Juice Shop's login form, e.g.:</p>
+          <pre>' OR 1=1--</pre>
+          <p>If it logs you in without a real password, the app is vulnerable to SQL injection — a bug Juice Shop deliberately contains.</p>
+        </div>
+
+        <div class="step-card">
+          <h4><span class="dot">2</span> Cross-Site Scripting (XSS)</h4>
+          <p>Inject a script into a vulnerable input field (e.g. the search bar):</p>
+          <pre>&lt;script&gt;alert('XSS')&lt;/script&gt;</pre>
+          <p>If a popup fires, the app is reflecting your input back unescaped — a classic XSS vulnerability.</p>
+        </div>
+
+        <div class="step-card">
+          <h4><span class="dot">3</span> Brute Force</h4>
+          <p>Run a controlled password spray against the login page using Hydra (from Kali):</p>
+          <pre>hydra -l admin@juice-sh.op -P /usr/share/wordlists/rockyou.txt \
+  YOUR_EC2_IP -s 3000 http-post-form \
+  "/rest/user/login:email=^USER^&password=^PASS^:F=Invalid"</pre>
+          <p>Simulates an automated credential-guessing attack — this generates repeated HTTP requests that VPC Flow Logs and GuardDuty will both notice.</p>
+        </div>
+
+        <div class="step-card">
+          <h4><span class="dot">4</span> Directory Enumeration</h4>
+          <pre>gobuster dir -u http://YOUR_EC2_IP:3000 -w common.txt</pre>
+          <p>Scans for hidden pages/endpoints not linked from the main site — a standard early-recon technique real attackers use.</p>
+        </div>
+
+        <div class="callout why">
+          <div class="label">Why these four specifically</div>
+          SQLi and XSS are the two most-cited entries in the OWASP Top 10 — almost every security interview touches on them. Brute force and directory enumeration represent the "automated/noisy" side of attacks, which is exactly what network-layer telemetry (Flow Logs, GuardDuty) is built to catch.
+        </div>
+      </section>
+
+      <!-- PHASE 6 -->
+      <section class="phase-block" id="phase6">
+        <h2 class="phase"><span class="num">Phase 6</span></h2>
+        <h3 class="title">Ship the logs into a SIEM</h3>
+        <p>CloudTrail, Flow Logs, and GuardDuty findings all exist natively inside AWS — but they're scattered across different consoles. A SIEM (Security Information and Event Management tool) pulls them into one searchable place, the way a real SOC analyst works.</p>
+
+        <div class="flow-mini">
+          <span class="node">Sources</span><span class="arrow">→</span>
+          <span class="node">Staging (S3 / CloudWatch)</span><span class="arrow">→</span>
+          <span class="node">SIEM (OpenSearch/ELK)</span><span class="arrow">→</span>
+          <span class="node">Kibana Dashboards</span>
+        </div>
+
+        <div class="step-card">
+          <h4><span class="dot">1</span> Simplest path — CloudTrail → S3 → OpenSearch</h4>
+          <p>CloudTrail already writes to an S3 bucket (from Phase 4). Use <strong>Amazon OpenSearch Service</strong> (AWS's managed Elasticsearch/Kibana) and set up an ingestion pipeline that reads from that S3 bucket.</p>
+          <p>Console → search <strong>OpenSearch Service</strong> → Create domain → choose a small free-tier-eligible instance type → once created, use OpenSearch Ingestion (or a Lambda function triggered on new S3 objects) to push CloudTrail records in.</p>
+        </div>
+
+        <div class="step-card">
+          <h4><span class="dot">2</span> VPC Flow Logs via CloudWatch</h4>
+          <p>Since Flow Logs are already going to CloudWatch Logs (Phase 4), you can either subscribe a Lambda to forward them to OpenSearch, or use CloudWatch Logs Insights directly for simpler querying without a separate SIEM.</p>
+        </div>
+
+        <div class="step-card">
+          <h4><span class="dot">3</span> Lower-cost alternative — self-hosted ELK</h4>
+          <p>If OpenSearch Service feels heavy for a student budget, run Elasticsearch + Logstash + Kibana yourself on a small EC2 instance (or Docker), and use Logstash's S3 input plugin to pull CloudTrail/Flow Log files directly. More manual setup, but avoids OpenSearch Service's hourly charges.</p>
+        </div>
+
+        <div class="callout why">
+          <div class="label">Why bother with a SIEM instead of just reading the AWS console?</div>
+          In a real SOC, dozens of systems generate logs — nobody clicks through five separate AWS consoles during an incident. A SIEM correlates everything into one searchable timeline. Demonstrating this step, even at small scale, shows you understand how security operations actually function day-to-day.
+        </div>
+      </section>
+
+      <!-- PHASE 7 -->
+      <section class="phase-block" id="phase7">
+        <h2 class="phase"><span class="num">Phase 7</span></h2>
+        <h3 class="title">Build the SOC console — dashboards and a detection rule</h3>
+
+        <div class="step-card">
+          <h4><span class="dot">1</span> Kibana dashboards to build</h4>
+          <table>
+            <tr><th>Dashboard</th><th>What it shows</th></tr>
+            <tr><td>Top source IPs</td><td>Most active external addresses hitting your app</td></tr>
+            <tr><td>Connections by port</td><td>Unusual access attempts to web/admin ports</td></tr>
+            <tr><td>GuardDuty findings</td><td>Active AWS threat detections, listed and filterable</td></tr>
+            <tr><td>IAM activity timeline</td><td>Privileged or unusual API actions over time</td></tr>
+          </table>
+        </div>
+
+        <div class="step-card">
+          <h4><span class="dot">2</span> Write an example detection rule</h4>
+          <p>A simple threshold-based rule flagging high-volume requests to your app's port:</p>
+          <pre>SELECT srcaddr, COUNT(*) as requests
+FROM vpc_flow_logs
+WHERE dstport = 3000
+GROUP BY srcaddr
+HAVING COUNT(*) > 100</pre>
+          <p>Any source IP crossing 100 requests to port 3000 gets flagged — this is the same logic real SOC teams use for brute-force/scanning detection, just simplified.</p>
+        </div>
+
+        <div class="step-card">
+          <h4><span class="dot">3</span> Example resulting alert</h4>
+          <p><strong>ALERT:</strong> "Potential brute-force or scanning activity detected from 203.x.x.x." — this is what a GuardDuty finding or your custom Kibana rule would surface once your Hydra brute-force run (Phase 5) crosses the threshold.</p>
+        </div>
+      </section>
+
+      <!-- PHASE 8 -->
+      <section class="phase-block" id="phase8">
+        <h2 class="phase"><span class="num">Phase 8</span></h2>
+        <h3 class="title">The analyst workflow — when the alert fires</h3>
+        <p>This is the sequence to actually practice and be ready to narrate in an interview — it's the core reasoning any SOC analyst performs on every alert.</p>
+
+        <div class="step-card">
+          <h4><span class="dot">1</span> Open the alert in Kibana</h4>
+          <p>Start from wherever the finding surfaced — a GuardDuty entry or your custom detection rule firing.</p>
+        </div>
+        <div class="step-card">
+          <h4><span class="dot">2</span> Identify the source IP</h4>
+          <p>Note the exact IP address associated with the suspicious activity.</p>
+        </div>
+        <div class="step-card">
+          <h4><span class="dot">3</span> Check all connections from that IP in VPC Flow Logs</h4>
+          <p>Search Flow Logs for every connection from that address — how many requests, to which ports, allowed or denied.</p>
+        </div>
+        <div class="step-card">
+          <h4><span class="dot">4</span> Review GuardDuty findings for the same IP</h4>
+          <p>Cross-reference — does GuardDuty independently flag this IP for port scanning, brute force, or something else?</p>
+        </div>
+        <div class="step-card">
+          <h4><span class="dot">5</span> Confirm the attack type</h4>
+          <p>Based on the pattern (many failed logins = brute force; wide port sweep = scanning; single anomalous request = exploitation attempt), classify what actually happened.</p>
+        </div>
+        <div class="step-card">
+          <h4><span class="dot">6</span> Recommend containment</h4>
+          <p>Document the recommendation: block the IP at the Security Group level, or add a WAF rule if one is in place.</p>
+        </div>
+
+        <div class="callout why">
+          <div class="label">Why this sequence matters</div>
+          This exact reasoning chain — alert → source → correlate → classify → recommend — is what's discussed in SOC analyst interviews. Practicing it against your own real data means you can walk an interviewer through a genuine example, not a hypothetical one.
+        </div>
+      </section>
+
+      <!-- PHASE 9 -->
+      <section class="phase-block" id="phase9">
+        <h2 class="phase"><span class="num">Phase 9 · Optional</span></h2>
+        <h3 class="title">Going further — two upgrades that raise the ceiling</h3>
+
+        <div class="step-card">
+          <h4><span class="dot">1</span> Endpoint visibility with Wazuh</h4>
+          <p>Install the Wazuh agent on your EC2 instance to correlate three layers of activity in one place:</p>
+          <ul class="plain">
+            <li><strong>Cloud activity</strong> — CloudTrail</li>
+            <li><strong>Network activity</strong> — VPC Flow Logs</li>
+            <li><strong>Host activity</strong> — Sysmon / Linux audit logs, captured directly on the instance</li>
+          </ul>
+          <p>This turns the project into a hybrid cloud SOC — cloud-layer and host-layer visibility combined.</p>
+        </div>
+
+        <div class="step-card">
+          <h4><span class="dot">2</span> AI-assisted triage</h4>
+          <p>A small Python script reads GuardDuty findings via the AWS SDK (boto3) and sends the finding text to an LLM, asking it to explain the threat in plain language and suggest containment steps.</p>
+          <p>Example output style:</p>
+          <pre>AI-GENERATED FINDING SUMMARY
+The EC2 instance is receiving reconnaissance traffic on an
+exposed port — likely internet-wide scanning or targeted
+probing. Restrict inbound access, enable AWS WAF, and review
+connections from the source IP.</pre>
+        </div>
+      </section>
+
+      <!-- COSTS -->
+      <section class="phase-block" id="costs">
+        <h2 class="phase"><span class="num">Safety</span></h2>
+        <h3 class="title">Cost &amp; safety notes</h3>
+        <ul class="plain">
+          <li><strong>EC2 t2.micro</strong> — free tier eligible, no cost if you stay within limits.</li>
+          <li><strong>CloudTrail (management events)</strong> — free for the standard trail.</li>
+          <li><strong>VPC Flow Logs</strong> — small CloudWatch storage cost, negligible at student-project volume.</li>
+          <li><strong>GuardDuty</strong> <span class="badge paid">30-day trial</span> — free for the first 30 days per account per region; after that, priced per volume analyzed. For a short, low-traffic student lab, expect well under $1-2 total if disabled promptly after testing.</li>
+          <li><strong>OpenSearch Service</strong> <span class="badge paid">free tier available</span> — small instance types are free-tier eligible for the first 12 months; keep the domain small and short-lived.</li>
+        </ul>
+        <div class="callout warn">
+          <div class="label">Recommended safety routine</div>
+          1) Set an AWS Billing Alert at a low threshold (e.g. ₹150-200) before enabling GuardDuty or OpenSearch.<br>
+          2) Do all attack/testing in a short, focused window rather than leaving services running for weeks.<br>
+          3) Disable GuardDuty and delete the OpenSearch domain immediately after capturing your screenshots and findings.
+        </div>
+      </section>
+
+      <!-- WRAP UP -->
+      <section class="phase-block" id="wrapup">
+        <h2 class="phase"><span class="num">Wrap-Up</span></h2>
+        <h3 class="title">Skills demonstrated &amp; a 10-day build plan</h3>
+
+        <table>
+          <tr><th>Skill area</th><th>What it covers</th></tr>
+          <tr><td>Cloud Security</td><td>VPC, Security Groups, IAM</td></tr>
+          <tr><td>VAPT</td><td>OWASP-style testing, enumeration, brute force</td></tr>
+          <tr><td>SOC</td><td>Log analysis, alert triage, investigation</td></tr>
+          <tr><td>Detection Engineering</td><td>Custom thresholds and queries</td></tr>
+          <tr><td>Threat Hunting</td><td>Flow log correlation</td></tr>
+          <tr><td>AI in Security</td><td>Automated incident summarisation</td></tr>
+        </table>
+
+        <table>
+          <tr><th>Days</th><th>What to do</th></tr>
+          <tr><td>1–3</td><td>Create AWS account, build VPC, launch EC2, deploy Juice Shop</td></tr>
+          <tr><td>4–5</td><td>Enable CloudTrail, Flow Logs, GuardDuty, Security Hub</td></tr>
+          <tr><td>6–7</td><td>Run SQLi, XSS, and brute-force tests against Juice Shop</td></tr>
+          <tr><td>8–9</td><td>Ingest logs to OpenSearch/ELK, build Kibana dashboards and detection rules</td></tr>
+          <tr><td>10</td><td>Add the AI summariser (optional) and write up findings</td></tr>
+        </table>
+
+        <div class="callout why">
+          <div class="label">Interview demo idea</div>
+          Open three things side by side: the live Juice Shop app, a real GuardDuty finding, and your Kibana dashboard — then walk the interviewer through the trace from attack to detection to your recommended response. That live, three-way correlation is the moment that makes this project memorable.
+        </div>
+
+        <div class="footer-note">
+          This guide follows the exact flow: deploy → instrument → attack → centralize logs → detect → investigate → (optionally) extend. Work through the phases in order — each one depends on the telemetry or infrastructure set up in the phase before it.
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+</body>
+</html>
